@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Enums for Analytics & RBAC
+enum Role {
+  ADMIN
+  USER
+}
+
+enum TipeUser {
+  RUMAH_TANGGA
+  SEKOLAH
+  KANTOR
+  LAINNYA
+}
+
+enum TipeInstitusi {
+  SEKOLAH
+  KANTOR
+  FASILITAS_UMUM
+  PERUMAHAN
+}
+
+enum StatusLaporan {
+  MENUNGGU
+  DIPROSES
+  SELESAI
+}
+
+// Model 1: User (Strict constraints + RBAC)
+model User {
+  id            String          @id @default(uuid())
+  nama          String
+  email         String          @unique
+  password      String
+  noHp          String          @unique
+  nik           String          @unique
+  role          Role            @default(USER)
+  tipe          TipeUser        @default(RUMAH_TANGGA)
+  laporanSampah LaporanSampah[]
+  poinReward    PoinReward?
+  transaksi     Transaksi[]
+  penarikan     Penarikan[]
+  verifikasiPenarikan Penarikan[] @relation("AdminVerifikasi")
+}
+
+// Model 2: JenisSampah
+model JenisSampah {
+  id            String          @id @default(uuid())
+  namaJenis     String          @unique
+  laporanSampah LaporanSampah[]
+}
+
+// Model 3: Wilayah
+model Wilayah {
+  id            String          @id @default(uuid())
+  namaWilayah   String          @unique
+  laporanSampah LaporanSampah[]
+  institusi     Institusi[]
+  jadwal        JadwalPenjemputan[]
+}
+
+// Model 4: Institusi (lokasi yang bisa dipilih langsung)
+model Institusi {
+  id            String          @id @default(uuid())
+  nama          String          @unique
+  tipe          TipeInstitusi
+  wilayahId     String?
+  wilayah       Wilayah?        @relation(fields: [wilayahId], references: [id])
+  laporan       LaporanSampah[]
+}
+
+// Model 5: LaporanSampah (Foreign Keys & Composite Unique)
+model LaporanSampah {
+  id            String      @id @default(uuid())
+  berat         Float
+  tanggalLapor  DateTime    @default(now())
+  userId        String
+  jenisSampahId String
+  wilayahId     String
+  institusiId   String?
+  keterangan    String?
+  status        StatusLaporan @default(MENUNGGU)
+
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jenisSampah   JenisSampah @relation(fields: [jenisSampahId], references: [id], onDelete: Restrict)
+  wilayah       Wilayah     @relation(fields: [wilayahId], references: [id], onDelete: Restrict)
+  institusi     Institusi?  @relation(fields: [institusiId], references: [id], onDelete: SetNull)
+
+  // One-to-One Relation to FotoSampah
+  fotoSampah    FotoSampah?
+
+  // Composite Unique: Prevent same user reporting same waste in same region on the same day
+  @@unique([userId, jenisSampahId, tanggalLapor, wilayahId])
+}
+
+// Model 6: FotoSampah (One-to-One)
+model FotoSampah {
+  id        String        @id @default(uuid())
+  imageUrl  String
+  laporanId String        @unique
+  laporan   LaporanSampah @relation(fields: [laporanId], references: [id], onDelete: Cascade)
+}
+
+// Model 7: PetugasPenjemput (Staff for picking up trash)
+model PetugasPenjemput {
+  id        String   @id @default(uuid())
+  nama      String
+  noHp      String   @unique
+  kendaraan Kendaraan?
+}
+
+// Model 8: Kendaraan (Vehicles used)
+model Kendaraan {
+  id        String   @id @default(uuid())
+  platNomor String   @unique
+  kapasitas Float    // in kg
+  petugasId String?  @unique
+  petugas   PetugasPenjemput? @relation(fields: [petugasId], references: [id], onDelete: SetNull)
+}
+
+// Model 9: JadwalPenjemputan (Schedule)
+model JadwalPenjemputan {
+  id        String   @id @default(uuid())
+  tanggal   DateTime
+  wilayahId String
+  wilayah   Wilayah  @relation(fields: [wilayahId], references: [id], onDelete: Restrict)
+}
+
+// Model 10: PoinReward (Rewards for users)
+model PoinReward {
+  id        String   @id @default(uuid())
+  jumlah    Int      @default(0)
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum JenisTransaksi {
+  DAPAT_POIN
+  TUKAR_POIN
+}
+
+enum MetodePenarikan {
+  GOPAY
+  DANA
+  OVO
+  SHOPEEPAY
+}
+
+enum StatusPenarikan {
+  PENDING
+  BERHASIL
+  GAGAL
+}
+
+// Model 11: Transaksi (Bonus Point 6: Transaction feature)
+model Transaksi {
+  id          String         @id @default(uuid())
+  userId      String
+  jenis       JenisTransaksi
+  jumlah      Int
+  keterangan  String
+  tanggal     DateTime       @default(now())
+  
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Model 12: Penarikan (e-Wallet Withdrawal)
+model Penarikan {
+  id              String           @id @default(uuid())
+  userId          String
+  jumlahPoin      Int              // poin yang ditukar
+  nominal         Int              // nominal rupiah (poin * 100)
+  metode          MetodePenarikan
+  nomorTujuan     String           // nomor HP e-Wallet
+  status          StatusPenarikan  @default(PENDING)
+  nomorReferensi  String           @unique // kode unik bukti transfer
+  tanggal         DateTime         @default(now())
+  tanggalVerif    DateTime?
+  adminId         String?          // admin yang memverifikasi
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  admin           User?            @relation("AdminVerifikasi", fields: [adminId], references: [id], onDelete: SetNull)
+}

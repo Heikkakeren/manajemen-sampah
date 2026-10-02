@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# uploads & puppeteer scripts
+/public/uploads
+puppeteer-core
+audit_*.js
+take_*.js
+render_*.js
+export_*.js
+generate_word.py
+*.png
+!public/*.png
+*.docx
+*.sql

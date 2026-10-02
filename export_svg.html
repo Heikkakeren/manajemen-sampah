@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+  </script>
+</head>
+<body>
+  <div id="erd" class="mermaid">
+    erDiagram
+      USER ||--o{ LAPORAN_SAMPAH : membuat
+      USER ||--o| POIN_REWARD : memiliki
+      USER ||--o{ TRANSAKSI : melakukan
+      JENIS_SAMPAH ||--o{ LAPORAN_SAMPAH : dikategorikan
+      WILAYAH ||--o{ LAPORAN_SAMPAH : lokasi
+      WILAYAH ||--o{ JADWAL_PENJEMPUTAN : memiliki
+      LAPORAN_SAMPAH ||--o| FOTO_SAMPAH : melampirkan
+      PETUGAS_PENJEMPUT ||--o| KENDARAAN : menggunakan
+      PETUGAS_PENJEMPUT }o--o{ WILAYAH : bertugas_di
+      TRANSAKSI { string id PK string userId FK string jenis int jumlah datetime tanggal }
+  </div>
+  <div id="usecase" class="mermaid">
+    flowchart LR
+      User((User))
+      Admin((Admin))
+      subgraph Aplikasi EcoTrack
+          UC1(Login & Register)
+          UC2(Lapor Sampah)
+          UC3(Tukar Poin ke Saldo)
+          UC4(Verifikasi & Ubah Status)
+          UC5(Kelola Master Data)
+      end
+      User --> UC1
+      User --> UC2
+      User --> UC3
+      Admin --> UC1
+      Admin --> UC4
+      Admin --> UC5
+      UC4 -.->|Memicu Tambah Poin| UC3
+  </div>
+</body>
+</html>
