@@ -145,7 +145,7 @@ export function LaporForm({
       const result = await createLaporan(formData);
       if (result.success) {
         toast.success(result.message);
-        router.push("/dashboard/user/lapor/success");
+        router.push("/dashboard/user");
         router.refresh();
       } else {
         toast.error(result.message);
