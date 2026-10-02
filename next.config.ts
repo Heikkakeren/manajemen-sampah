@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [],
   },
+  // Fix Vercel Prisma ENOENT
+  experimental: {
+    outputFileTracingIncludes: {
+      "/*": ["./prisma/schema.prisma"],
+    },
+  },
   // Allow local uploads to be served
   async headers() {
     return [

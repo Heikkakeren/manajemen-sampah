@@ -102,14 +102,19 @@ export async function createLaporan(formData: FormData): Promise<ActionResult> {
     }
 
     const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
-
-    const ext = fotoFile.name.split(".").pop()?.toLowerCase() || "jpg";
-    const filename = `sampah_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const filepath = path.join(uploadDir, filename);
-    const buffer = Buffer.from(await fotoFile.arrayBuffer());
-    await writeFile(filepath, buffer);
-    imageUrl = `/uploads/${filename}`;
+    try {
+      await mkdir(uploadDir, { recursive: true });
+      const ext = fotoFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      const filename = `sampah_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const filepath = path.join(uploadDir, filename);
+      const buffer = Buffer.from(await fotoFile.arrayBuffer());
+      await writeFile(filepath, buffer);
+      imageUrl = `/uploads/${filename}`;
+    } catch (error) {
+      console.warn("Serverless FS Error (Vercel):", error);
+      // Fallback untuk Vercel (karena read-only)
+      imageUrl = `/placeholder.png`;
+    }
 
     await prisma.$transaction(async (tx) => {
       const laporan = await tx.laporanSampah.create({
